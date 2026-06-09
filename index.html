@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="lv">
+<head>
+    <meta charset="UTF-8">
+    <title>Homework Helper</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: system-ui, 'Segoe UI', sans-serif;
+        }
+
+        body {
+            background: #f0f2f5;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .app-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 24px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        header {
+            background: #2c3e66;
+            color: white;
+            padding: 1rem 2rem;
+        }
+
+        header h1 {
+            margin: 0 0 0.5rem 0;
+        }
+
+        nav {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .nav-btn {
+            background: transparent;
+            border: none;
+            color: white;
+            font-size: 1rem;
+            padding: 0.5rem 1rem;
+            cursor: pointer;
+            border-radius: 30px;
+            transition: 0.2s;
+        }
+
+        .nav-btn.active {
+            background: #ffb347;
+            color: #2c3e66;
+            font-weight: bold;
+        }
+
+        .view {
+            display: none;
+            padding: 2rem;
+        }
+
+        .view.active {
+            display: block;
+        }
+
+        .add-task-form {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 2rem;
+            background: #f8f9fc;
+            padding: 1rem;
+            border-radius: 20px;
+        }
+
+        .add-task-form input, .add-task-form select, .add-task-form button {
+            padding: 10px 15px;
+            border-radius: 40px;
+            border: 1px solid #ccc;
+            font-size: 1rem;
+        }
+
+        .add-task-form button {
+            background: #2c3e66;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+
+        .task-card {
+            background: white;
+            border-left: 6px solid;
+            margin: 12px 0;
+            padding: 12px 16px;
+            border-radius: 16px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .task-info {
+            flex: 2;
+        }
+
+        .task-name {
+            font-weight: bold;
+            font-size: 1.1rem;
+        }
+
+        .task-subject, .task-deadline {
+            font-size: 0.85rem;
+            color: #555;
+        }
+
+        .task-actions button {
+            margin-left: 8px;
+            padding: 6px 12px;
+            border: none;
+            border-radius: 30px;
+            cursor: pointer;
+        }
+
+        .edit-btn { background: #ffc107; }
+        .delete-btn { background: #dc3545; color: white; }
+        .complete-btn { background: #28a745; color: white; }
+
+        .status-expired { border-left-color: #dc3545; }
+        .status-urgent { border-left-color: #ffc107; }
+        .status-completed { border-left-color: #28a745; opacity: 0.7; text-decoration: line-through; }
+
+        .calendar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 8px;
+            text-align: center;
+        }
+
+        .calendar-day {
+            background: #f8f9fc;
+            border-radius: 12px;
+            padding: 12px 5px;
+            font-size: 0.9rem;
+            min-height: 80px;
+        }
+
+        .calendar-day .date-num {
+            font-weight: bold;
+            display: block;
+        }
+
+        .task-indicator {
+            font-size: 0.7rem;
+            background: #ddd;
+            border-radius: 20px;
+            padding: 2px 5px;
+            margin-top: 4px;
+            display: inline-block;
+        }
+
+        .stats-container {
+            text-align: center;
+            max-width: 400px;
+            margin: 0 auto;
+        }
+
+        #stats-percent {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #2c3e66;
+        }
+
+        .legend {
+            margin-top: 20px;
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+        }
+    </style>
+</head>
+<body>
+<div class="app-container">
+    <header>
+        <h1>📚 Homework Helper</h1>
+        <nav>
+            <button class="nav-btn active" data-view="tasks">📋 Uzdevumi</button>
+            <button class="nav-btn" data-view="calendar">📅 Kalendārs</button>
+            <button class="nav-btn" data-view="stats">📊 Statistika</button>
+        </nav>
+    </header>
+
+    <div id="tasks-view" class="view active">
+        <div class="add-task-form">
+            <input type="text" id="task-name" placeholder="Uzdevuma nosaukums" required>
+            <select id="task-subject">
+                <option value="Matemātika">Matemātika</option>
+                <option value="Latviešu valoda">Latviešu valoda</option>
+                <option value="Dabaszinības">Dabaszinības</option>
+                <option value="Vēsture">Vēsture</option>
+                <option value="Cits">Cits</option>
+            </select>
+            <input type="date" id="task-deadline">
+            <button id="add-task-btn">➕ Pievienot uzdevumu</button>
+        </div>
+        <div class="task-list" id="task-list"></div>
+    </div>
+
+    <div id="calendar-view" class="view">
+        <div class="calendar-header">
+            <button id="prev-month">◀</button>
+            <h2 id="month-year"></h2>
+            <button id="next-month">▶</button>
+        </div>
+        <div class="calendar-grid" id="calendar-grid"></div>
+        <div class="legend">
+            <span class="legend-red">🟥 Kavēts</span>
+            <span class="legend-yellow">🟨 Tuvojas (≤2 dienas)</span>
+            <span class="legend-green">🟩 Izpildīts</span>
+        </div>
+    </div>
+
+    <div id="stats-view" class="view">
+        <h3>Progress</h3>
+        <div class="stats-container">
+            <div id="stats-chart" style="margin-top:20px;"></div>
+            <p id="stats-percent"></p>
+        </div>
+    </div>
+</div>
+
+<script>
+    let tasks = [];
+    let currentMonth = new Date().getMonth();
+    let currentYear = new Date().getFullYear();
+
+    function loadData() {
+        const stored = localStorage.getItem('homeworkHelper');
+        tasks = stored ? JSON.parse(stored) : [];
+        renderAll();
+    }
+
+    function saveData() {
+        localStorage.setItem('homeworkHelper', JSON.stringify(tasks));
+        showNotification("Dati saglabāti!");
+    }
+
+    function showNotification(msg) {
+        const div = document.createElement('div');
+        div.innerText = msg;
+        div.style.position = 'fixed';
+        div.style.bottom = '20px';
+        div.style.right = '20px';
+        div.style.background = '#2c3e66';
+        div.style.color = 'white';
+        div.style.padding = '10px 20px';
+        div.style.borderRadius = '30px';
+        div.style.zIndex = '1000';
+        document.body.appendChild(div);
+        setTimeout(() => div.remove(), 2000);
+    }
+
+    function addTask(name, subject, deadline) {
+        if (!name || !deadline) return alert("Lūdzu aizpildiet nosaukumu un termiņu!");
+        const newTask = {
+            id: Date.now(),
+            name: name,
+            subject: subject,
+            deadline: deadline,
+            completed: false
+        };
+        tasks.push(newTask);
+        saveData();
+        renderAll();
+        checkDeadlines();
+    }
+
+    function editTask(id, newName, newSubject, newDeadline) {
+        const task = tasks.find(t => t.id == id);
+        if (task) {
+            if (newName) task.name = newName;
+            if (newSubject) task.subject = newSubject;
+            if (newDeadline) task.deadline = newDeadline;
+            saveData();
+            renderAll();
+        }
+    }
+
+    function deleteTask(id) {
+        tasks = tasks.filter(t => t.id != id);
+        saveData();
+        renderAll();
+    }
+
+    function toggleComplete(id) {
+        const task = tasks.find(t => t.id == id);
+        if (task) {
+            task.completed = !task.completed;
+            saveData();
+            renderAll();
+        }
+    }
+
+    function checkDeadlines() {
+        const today = new Date();
+        today.setHours(0,0,0,0);
+        let reminderSent = false;
+        tasks.forEach(task => {
+            if (task.completed) return;
+            const deadlineDate = new Date(task.deadline);
+            deadlineDate.setHours(0,0,0,0);
+            const diffDays = Math.ceil((deadlineDate - today) / (1000*60*60*24));
+            if (diffDays >= 0 && diffDays <= 2 && !reminderSent) {
+                showNotification(`❗ Tuvojas termiņš: "${task.name}" (${task.deadline})`);
+                reminderSent = true;
+            }
+        });
+    }
+
+    function getTaskStatus(task) {
+        if (task.completed) return 'completed';
+        const today = new Date(); today.setHours(0,0,0,0);
+        const deadline = new Date(task.deadline); deadline.setHours(0,0,0,0);
+        if (deadline < today) return 'expired';
+        const diff = Math.ceil((deadline - today) / (1000*60*60*24));
+        return diff <= 2 ? 'urgent' : 'normal';
+    }
+
+    function renderTasks() {
+        const container = document.getElementById('task-list');
+        if (!container) return;
+        container.innerHTML = '';
+        if (tasks.length === 0) {
+            container.innerHTML = '<p>Nav neviena uzdevuma. Pievieno jaunu!</p>';
+            return;
+        }
+        [...tasks].reverse().forEach(task => {
+            const status = getTaskStatus(task);
+            let statusClass = '';
+            if (status === 'expired') statusClass = 'status-expired';
+            else if (status === 'urgent') statusClass = 'status-urgent';
+            else if (status === 'completed') statusClass = 'status-completed';
+            const div = document.createElement('div');
+            div.className = `task-card ${statusClass}`;
+            div.innerHTML = `
+                <div class="task-info">
+                    <div class="task-name">${escapeHtml(task.name)} ${task.completed ? '✅' : ''}</div>
+                    <div class="task-subject">📖 ${task.subject}</div>
+                    <div class="task-deadline">📅 Termiņš: ${task.deadline}</div>
+                </div>
+                <div class="task-actions">
+                    <button class="edit-btn" data-id="${task.id}">✏️ Rediģēt</button>
+                    <button class="complete-btn" data-id="${task.id}">${task.completed ? '↩️ Atsaukt' : '✅ Izpildīts'}</button>
+                    <button class="delete-btn" data-id="${task.id}">🗑️ Dzēst</button>
+                </div>
+            `;
+            container.appendChild(div);
+        });
+        document.querySelectorAll('.edit-btn').forEach(btn => {
+            btn.onclick = () => {
+                const id = parseInt(btn.dataset.id);
+                const task = tasks.find(t => t.id == id);
+                const newName = prompt("Jauns nosaukums:", task.name);
+                if (newName && newName.trim()) {
+                    const newSubject = prompt("Jauns priekšmets:", task.subject);
+                    const newDeadline = prompt("Jauns termiņš (YYYY-MM-DD):", task.deadline);
+                    editTask(id, newName.trim(), newSubject, newDeadline);
+                }
+            };
+        });
+        document.querySelectorAll('.complete-btn').forEach(btn => {
+            btn.onclick = () => toggleComplete(parseInt(btn.dataset.id));
+        });
+        document.querySelectorAll('.delete-btn').forEach(btn => {
+            btn.onclick = () => deleteTask(parseInt(btn.dataset.id));
+        });
+    }
+
+    function renderCalendar() {
+        const grid = document.getElementById('calendar-grid');
+        const monthYearSpan = document.getElementById('month-year');
+        if (!grid) return;
+        const firstDay = new Date(currentYear, currentMonth, 1);
+        const startDayOfWeek = firstDay.getDay();
+        const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+        monthYearSpan.innerText = `${firstDay.toLocaleString('lv', { month: 'long' })} ${currentYear}`;
+        grid.innerHTML = '';
+        const weekdays = ['P', 'O', 'T', 'C', 'P', 'S', 'Sv'];
+        weekdays.forEach(day => {
+            const header = document.createElement('div');
+            header.style.fontWeight = 'bold';
+            header.innerText = day;
+            grid.appendChild(header);
+        });
+        for (let i = 0; i < startDayOfWeek; i++) {
+            const empty = document.createElement('div');
+            empty.className = 'calendar-day empty';
+            grid.appendChild(empty);
+        }
+        for (let d = 1; d <= daysInMonth; d++) {
+            const dateStr = `${currentYear}-${String(currentMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+            const dayTasks = tasks.filter(t => t.deadline === dateStr);
+            const cell = document.createElement('div');
+            cell.className = 'calendar-day';
+            cell.innerHTML = `<span class="date-num">${d}</span>`;
+            if (dayTasks.length > 0) {
+                const ind = document.createElement('div');
+                ind.className = 'task-indicator';
+                ind.innerText = `${dayTasks.length} uzdev.`;
+                const firstStatus = getTaskStatus(dayTasks[0]);
+                if (firstStatus === 'expired') ind.style.background = '#dc3545';
+                else if (firstStatus === 'urgent') ind.style.background = '#ffc107';
+                else if (firstStatus === 'completed') ind.style.background = '#28a745';
+                else ind.style.background = '#aaa';
+                cell.appendChild(ind);
+            }
+            grid.appendChild(cell);
+        }
+    }
+
+    function renderStats() {
+        const total = tasks.length;
+        const completedCount = tasks.filter(t => t.completed).length;
+        const percent = total === 0 ? 0 : Math.round((completedCount / total) * 100);
+        document.getElementById('stats-percent').innerHTML = `✅ Izpildīts: ${percent}% (${completedCount} no ${total})`;
+        const chartDiv = document.getElementById('stats-chart');
+        if (chartDiv) {
+            chartDiv.innerHTML = `
+                <div style="background:#ddd; border-radius:20px; overflow:hidden;">
+                    <div style="background:#28a745; width:${percent}%; height:30px; text-align:center; color:white; line-height:30px;">${percent}%</div>
+                </div>
+            `;
+        }
+    }
+
+    function setupNavigation() {
+        document.querySelectorAll('.nav-btn').forEach(btn => {
+            btn.onclick = () => {
+                document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                const viewId = btn.dataset.view + '-view';
+                document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+                document.getElementById(viewId).classList.add('active');
+                if (btn.dataset.view === 'calendar') renderCalendar();
+                if (btn.dataset.view === 'stats') renderStats();
+                if (btn.dataset.view === 'tasks') renderTasks();
+            };
+        });
+    }
+
+    function escapeHtml(str) {
+        return str.replace(/[&<>]/g, function(m) {
+            if (m === '&') return '&amp;';
+            if (m === '<') return '&lt;';
+            if (m === '>') return '&gt;';
+            return m;
+        });
+    }
+
+    function renderAll() {
+        renderTasks();
+        renderCalendar();
+        renderStats();
+        checkDeadlines();
+    }
+
+    document.getElementById('add-task-btn').onclick = () => {
+        const name = document.getElementById('task-name').value;
+        const subject = document.getElementById('task-subject').value;
+        const deadline = document.getElementById('task-deadline').value;
+        addTask(name, subject, deadline);
+        document.getElementById('task-name').value = '';
+        document.getElementById('task-deadline').value = '';
+    };
+    document.getElementById('prev-month').onclick = () => {
+        currentMonth--;
+        if (currentMonth < 0) { currentMonth = 11; currentYear--; }
+        renderCalendar();
+    };
+    document.getElementById('next-month').onclick = () => {
+        currentMonth++;
+        if (currentMonth > 11) { currentMonth = 0; currentYear++; }
+        renderCalendar();
+    };
+    loadData();
+    setupNavigation();
+    setInterval(checkDeadlines, 1000 * 60 * 30);
+</script>
+</body>
+</html>
